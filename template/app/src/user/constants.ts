@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Shield } from "lucide-react";
+import { LayoutDashboard, Settings, Shield, Sparkles } from "lucide-react";
 import { routes } from "wasp/client/router";
 
 export const userMenuItems = [
@@ -6,6 +6,13 @@ export const userMenuItems = [
     name: "AI Scheduler (Demo App)",
     to: routes.DemoAppRoute.to,
     icon: LayoutDashboard,
+    isAdminOnly: false,
+    isAuthRequired: true,
+  },
+  {
+    name: "AI Animation Studio",
+    to: routes.HtmlAnimationRoute.to,
+    icon: Sparkles,
     isAdminOnly: false,
     isAuthRequired: true,
   },
