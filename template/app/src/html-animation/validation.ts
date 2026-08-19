@@ -31,6 +31,7 @@ export type HtmlValidationResult =
 export function validateAnimationHtml(html: string): HtmlValidationResult {
   const issues: string[] = [];
   const byteLength = new TextEncoder().encode(html).length;
+  const decodedCss = decodeCssEscapes(html);
 
   if (byteLength > MAX_HTML_BYTES) {
     issues.push(
@@ -72,7 +73,7 @@ export function validateAnimationHtml(html: string): HtmlValidationResult {
     );
   }
 
-  if (/@import\b/i.test(html)) {
+  if (/@import\b/i.test(decodedCss)) {
     issues.push("CSS @import is not allowed.");
   }
 
@@ -82,7 +83,7 @@ export function validateAnimationHtml(html: string): HtmlValidationResult {
     }
   }
 
-  for (const value of readCssUrlValues(html)) {
+  for (const value of readCssUrlValues(decodedCss)) {
     if (!isAllowedEmbeddedUrl(value)) {
       issues.push(`External CSS resource is not allowed: ${summarize(value)}`);
     }
@@ -101,7 +102,12 @@ export function hardenAnimationHtml(html: string): string {
   }
 
   const csp = `<meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">`;
-  return html.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}\n    ${csp}`);
+  // Browsers place this pre-<html> meta token in the implicit head. Keeping it
+  // before all model-controlled markup prevents a quoted `>` from swallowing it.
+  return html.replace(
+    /^\s*<!doctype html>/i,
+    (doctype) => `${doctype}\n${csp}`,
+  );
 }
 
 function readUrlAttributeValues(html: string): string[] {
@@ -125,6 +131,17 @@ function readCssUrlValues(html: string): string[] {
   }
 
   return values;
+}
+
+function decodeCssEscapes(value: string): string {
+  return value
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_match, hex: string) => {
+      const codePoint = Number.parseInt(hex, 16);
+      return codePoint === 0 || codePoint > 0x10ffff
+        ? "\uFFFD"
+        : String.fromCodePoint(codePoint);
+    })
+    .replace(/\\([^\r\n0-9a-f])/gi, "$1");
 }
 
 function isAllowedEmbeddedUrl(value: string): boolean {

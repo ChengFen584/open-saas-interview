@@ -46,6 +46,20 @@ describe("validateAnimationHtml", () => {
       expect(result.issues).toContain("CSS @import is not allowed.");
     }
   });
+
+  it("rejects external CSS URLs hidden with escape sequences", () => {
+    const unsafeAnimation = safeAnimation.replace(
+      "</style>",
+      ".orb { background: u\\72l(https://example.com/a.png); }</style>",
+    );
+
+    const result = validateAnimationHtml(unsafeAnimation);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues.join(" ")).toContain("External CSS resource");
+    }
+  });
 });
 
 describe("hardenAnimationHtml", () => {
@@ -55,5 +69,20 @@ describe("hardenAnimationHtml", () => {
     expect(hardened).toContain("Content-Security-Policy");
     expect(hardened).toContain("connect-src 'none'");
     expect(hardened).toContain("frame-src 'none'");
+  });
+
+  it("places the policy before untrusted document markup", () => {
+    const animationWithQuotedDelimiter = safeAnimation.replace(
+      "<head>",
+      '<head data-note=">">',
+    );
+
+    const hardened = hardenAnimationHtml(animationWithQuotedDelimiter);
+    const policyIndex = hardened.indexOf("Content-Security-Policy");
+    const htmlIndex = hardened.indexOf("<html");
+
+    expect(policyIndex).toBeGreaterThan(-1);
+    expect(policyIndex).toBeLessThan(htmlIndex);
+    expect(hardened).toContain('<head data-note=">">');
   });
 });
