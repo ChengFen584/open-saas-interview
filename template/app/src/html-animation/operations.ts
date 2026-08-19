@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import type { HtmlAnimation } from "wasp/entities";
 import { env, HttpError } from "wasp/server";
 import type {
@@ -12,7 +11,7 @@ import {
   AnimationValidationError,
   generateValidatedAnimation,
 } from "./generation";
-import { OpenAiAnimationModel } from "./openAiAnimationModel";
+import { createOpenAiAnimationModel } from "./openAiAnimationModel";
 
 const generateInputSchema = z.object({
   prompt: z.string().trim().min(8).max(500),
@@ -58,8 +57,8 @@ export const generateHtmlAnimation: GenerateHtmlAnimation<
   });
 
   try {
-    const aiModel = new OpenAiAnimationModel(
-      new OpenAI({ apiKey: env.OPENAI_API_KEY }),
+    const aiModel = createOpenAiAnimationModel(
+      env.OPENAI_API_KEY,
       env.OPENAI_ANIMATION_MODEL,
     );
     const result = await generateValidatedAnimation(prompt, aiModel);

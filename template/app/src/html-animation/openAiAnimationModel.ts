@@ -4,6 +4,9 @@ import * as z from "zod";
 import type { AnimationDraft, AnimationModel } from "./generation";
 import { MAX_HTML_BYTES } from "./validation";
 
+const OPENAI_REQUEST_TIMEOUT_MS = 90_000;
+const OPENAI_MAX_RETRIES = 1;
+
 const animationDraftSchema = z.object({
   title: z.string().min(1).max(80),
   html: z.string().min(100).max(MAX_HTML_BYTES),
@@ -69,4 +72,17 @@ export class OpenAiAnimationModel implements AnimationModel {
 
     return response.output_parsed;
   }
+}
+
+export function createOpenAiAnimationModel(
+  apiKey: string,
+  model: string,
+): OpenAiAnimationModel {
+  const client = new OpenAI({
+    apiKey,
+    timeout: OPENAI_REQUEST_TIMEOUT_MS,
+    maxRetries: OPENAI_MAX_RETRIES,
+  });
+
+  return new OpenAiAnimationModel(client, model);
 }
